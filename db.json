@@ -24,6 +24,11 @@
       "id": 5,
       "name": "Khoa học",
       "emoji": "🔬"
+    },
+    {
+      "id": 4,
+      "name": "Tâm lý",
+      "emoji": "🧠"
     }
   ],
   "books": [
