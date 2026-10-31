@@ -1,5 +1,6 @@
-import React, { useCallback, useEffect, useState } from "react";
-import { StyleSheet, View } from "react-native";
+
+import React, { useCallback, useEffect, useState, useMemo } from "react";
+import { StyleSheet, View, Pressable, Text } from "react-native";
 import { Header } from "../components/Header";
 import { SearchBar } from "../components/SearchBar";
 import { CategoryChips } from "../components/CategoryChips";
@@ -12,16 +13,16 @@ import { ErrorView } from "../components/ErrorView";
 import { getBooks } from "../services/bookService";
 import { getCategories } from "../services/categoryService";
 import { getErrorMessage } from "../api/client";
-// import { EmptyState } from "../components/EmptyState";
-// import { useDebounce } from "../hooks/useDebounce";
-// import { filterBooks } from "../utils/filters";
+import { EmptyState } from "../components/EmptyState";
+import { useDebounce } from "../hooks/useDebounce";
+import { filterBooks } from "../utils/filters";
 import { PriceRange } from "../utils/filters";
 import { TabScreenProps } from "../navigation/types";
 import { colors } from "../theme";
 import { Book, Category } from "../types";
 import { useCart } from "../store/hooks";
 
-export function HomeScreen({ navigation }: TabScreenProps<"Home">) {
+export function HomeScreen({ navigation, route }: TabScreenProps<"Home">) {
   // TODO BT7.3d: lấy { totalQuantity } từ useCart() và truyền vào <FloatingCartButton count=... />
   const { totalQuantity } = useCart();
 
@@ -68,10 +69,30 @@ export function HomeScreen({ navigation }: TabScreenProps<"Home">) {
   const [priceRange, setPriceRange] = useState<PriceRange>(null);
 
   // TODO BT7.7a: const debouncedKeyword = useDebounce(keyword, 400);
-  // TODO BT7.7c: visibleBooks = useMemo(() => filterBooks(books, { keyword: debouncedKeyword, categoryId, priceRange }), [...])
-  const visibleBooks = books;
+  const debouncedKeyword = useDebounce(keyword, 400);
 
-  // TODO BT7.8b: nhận categoryId từ route.params (Tab Danh mục gửi sang) → setCategoryId(id) rồi navigation.setParams({ categoryId: undefined })
+  // TODO BT7.7c: visibleBooks = useMemo(() => filterBooks(books, { keyword: debouncedKeyword, categoryId, priceRange }), [...])
+  const visibleBooks = useMemo(
+    () =>
+      filterBooks(books, {
+        keyword: debouncedKeyword,
+        categoryId,
+        priceRange,
+      }),
+    [books, debouncedKeyword, categoryId, priceRange]
+  );
+
+  // TODO BT7.8b: nhận categoryId từ route.params (Tab Danh mục gửi sang)
+  useEffect(() => {
+    const id = route.params?.categoryId;
+
+    if (id !== undefined) {
+      setCategoryId(id);
+
+      // Xóa params sau khi nhận để tránh áp dụng lại bộ lọc cũ
+      navigation.setParams({ categoryId: undefined });
+    }
+  }, [route.params?.categoryId, navigation]);
 
   // TODO BT7.5c: hiển thị <LoadingView/> khi loading, <ErrorView message onRetry={load}/> khi error, ngược lại là BookGrid
   if (loading) {
@@ -82,8 +103,18 @@ export function HomeScreen({ navigation }: TabScreenProps<"Home">) {
     return <ErrorView message={error} onRetry={load} />;
   }
 
-  // TODO BT7.7d: ListEmptyComponent = <EmptyState emoji="🔎" title="Không tìm thấy sách phù hợp" … actionLabel="Xóa bộ lọc" /> + hàm clearFilters
-  // TODO BT7.7e: nút "✕ Xóa bộ lọc" (chỉ hiện khi đang có bộ lọc) trong header của lưới
+  // TODO BT7.7d: ListEmptyComponent = <EmptyState ... /> + hàm clearFilters
+  const clearFilters = () => {
+    setKeyword("");
+    setCategoryId(null);
+    setPriceRange(null);
+  };
+
+  // TODO BT7.7e: nút "✕ Xóa bộ lọc" chỉ hiện khi đang có bộ lọc
+  const hasFilter =
+    keyword.trim() !== "" ||
+    categoryId !== null ||
+    priceRange !== null;
 
   return (
     <View style={styles.container}>
@@ -122,8 +153,26 @@ export function HomeScreen({ navigation }: TabScreenProps<"Home">) {
               onChange={setPriceRange}
             />
 
-            {/* TODO BT7.5b: đã thay dữ liệu giả bằng dữ liệu API */}
+            {hasFilter && (
+              <Pressable
+                onPress={clearFilters}
+                style={{ paddingHorizontal: 12, paddingVertical: 8 }}
+              >
+                <Text style={{ color: colors.indigo, fontWeight: "700" }}>
+                  ✕ Xóa bộ lọc
+                </Text>
+              </Pressable>
+            )}
           </View>
+        }
+        ListEmptyComponent={
+          <EmptyState
+            emoji="🔎"
+            title="Không tìm thấy sách phù hợp"
+            message="Hãy thử từ khóa khác hoặc bỏ bớt bộ lọc."
+            actionLabel="Xóa bộ lọc"
+            onAction={clearFilters}
+          />
         }
       />
 

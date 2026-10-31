@@ -56,7 +56,7 @@ export function CategoriesScreen({ navigation }: TabScreenProps<"Categories">) {
         contentContainerStyle={{ padding: 12, gap: 10 }}
         renderItem={({ item }) => (
           // TODO BT7.8c: onPress → navigation.navigate("Home", { categoryId: item.id })
-          <Pressable style={styles.row} onPress={() => {}}>
+          <Pressable style={styles.row} onPress={() => navigation.navigate("Home", { categoryId: item.id })}>
             <Text style={styles.emoji}>{item.emoji}</Text>
             <Text style={styles.name}>{item.name}</Text>
             <Text style={styles.arrow}>›</Text>
